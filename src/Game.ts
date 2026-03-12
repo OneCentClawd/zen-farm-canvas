@@ -138,10 +138,12 @@ export class Game {
     // 天气效果（云、太阳/月亮、雨雪）
     this.renderer.drawWeather(this.weather, hour, deltaTime);
     
-    this.renderer.drawSoil();
+    // 土壤（根据湿度显示颜色）
+    const plot = this.getCurrentPlot();
+    const moisture = plot?.soilMoisture ?? 50;
+    this.renderer.drawSoil(moisture);
     
     // 植物或空地
-    const plot = this.getCurrentPlot();
     if (plot?.plant) {
       this.renderer.drawPlant(plot.plant, deltaTime);
     } else {

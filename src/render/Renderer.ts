@@ -108,20 +108,118 @@ export class Renderer {
   }
   
   /**
-   * 绘制土壤（单地块显示）
+   * 绘制土壤（根据湿度显示不同颜色）
+   * @param moisture 土壤湿度 0~100
    */
-  drawSoil() {
+  drawSoil(moisture: number = 50) {
     const soilY = this.height * (1 - this.SOIL_HEIGHT_RATIO);
     const soilHeight = this.height * this.SOIL_HEIGHT_RATIO;
     
+    // 根据湿度计算土壤颜色
+    // 干燥(0-30): 浅棕色  湿润(30-70): 深棕色  积水(70-100): 暗褐色带蓝
+    let topColor: string;
+    let midColor: string;
+    let bottomColor: string;
+    
+    if (moisture < 30) {
+      // 干燥 - 浅棕偏黄
+      const dryness = 1 - moisture / 30;  // 0~1
+      topColor = this.lerpColor('#8B6914', '#a07820', dryness);
+      midColor = this.lerpColor('#6B4914', '#856018', dryness);
+      bottomColor = this.lerpColor('#4a3010', '#5a4015', dryness);
+    } else if (moisture < 70) {
+      // 湿润 - 正常深棕色
+      topColor = '#8B6914';
+      midColor = '#6B4914';
+      bottomColor = '#4a3010';
+    } else {
+      // 积水 - 暗褐带蓝
+      const wetness = (moisture - 70) / 30;  // 0~1
+      topColor = this.lerpColor('#8B6914', '#5a5030', wetness);
+      midColor = this.lerpColor('#6B4914', '#4a4028', wetness);
+      bottomColor = this.lerpColor('#4a3010', '#3a3520', wetness);
+    }
+    
     // 土壤渐变
     const gradient = this.ctx.createLinearGradient(0, soilY, 0, this.height);
-    gradient.addColorStop(0, '#8B6914');   // 表层
-    gradient.addColorStop(0.3, '#6B4914'); // 中层
-    gradient.addColorStop(1, '#4a3010');   // 深层
+    gradient.addColorStop(0, topColor);
+    gradient.addColorStop(0.3, midColor);
+    gradient.addColorStop(1, bottomColor);
     
     this.ctx.fillStyle = gradient;
     this.ctx.fillRect(0, soilY, this.width, soilHeight);
+    
+    // 积水效果 - 表面反光
+    if (moisture > 70) {
+      const waterLevel = (moisture - 70) / 30;
+      this.ctx.fillStyle = `rgba(100, 130, 160, ${waterLevel * 0.15})`;
+      this.ctx.fillRect(0, soilY, this.width, soilHeight * 0.1);
+      
+      // 水面波纹
+      this.ctx.strokeStyle = `rgba(150, 180, 200, ${waterLevel * 0.2})`;
+      this.ctx.lineWidth = 1;
+      for (let i = 0; i < 3; i++) {
+        const waveY = soilY + 5 + i * 8;
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, waveY);
+        for (let x = 0; x < this.width; x += 20) {
+          this.ctx.quadraticCurveTo(
+            x + 10, waveY + Math.sin(x * 0.05 + Date.now() * 0.002) * 3,
+            x + 20, waveY
+          );
+        }
+        this.ctx.stroke();
+      }
+    }
+    
+    // 干裂效果
+    if (moisture < 20) {
+      const crackIntensity = 1 - moisture / 20;
+      this.ctx.strokeStyle = `rgba(60, 40, 20, ${crackIntensity * 0.5})`;
+      this.ctx.lineWidth = 1;
+      
+      // 画几条裂纹
+      const crackCount = Math.floor(crackIntensity * 5) + 2;
+      for (let i = 0; i < crackCount; i++) {
+        const startX = this.width * (0.1 + i * 0.15);
+        const startY = soilY + 10;
+        
+        this.ctx.beginPath();
+        this.ctx.moveTo(startX, startY);
+        this.ctx.lineTo(startX + 15, startY + 25);
+        this.ctx.lineTo(startX + 5, startY + 40);
+        this.ctx.stroke();
+        
+        // 分支
+        this.ctx.beginPath();
+        this.ctx.moveTo(startX + 15, startY + 25);
+        this.ctx.lineTo(startX + 30, startY + 35);
+        this.ctx.stroke();
+      }
+    }
+  }
+  
+  /**
+   * 颜色插值
+   */
+  private lerpColor(a: string, b: string, t: number): string {
+    const parseHex = (hex: string) => {
+      const h = hex.replace('#', '');
+      return {
+        r: parseInt(h.substring(0, 2), 16),
+        g: parseInt(h.substring(2, 4), 16),
+        b: parseInt(h.substring(4, 6), 16)
+      };
+    };
+    
+    const ca = parseHex(a);
+    const cb = parseHex(b);
+    
+    const r = Math.round(ca.r + (cb.r - ca.r) * t);
+    const g = Math.round(ca.g + (cb.g - ca.g) * t);
+    const bl = Math.round(ca.b + (cb.b - ca.b) * t);
+    
+    return `rgb(${r}, ${g}, ${bl})`;
   }
   
   /**
