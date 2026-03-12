@@ -74,14 +74,15 @@ export class WeatherRenderer {
   private drawCelestialBody(hour: number) {
     const ctx = this.ctx;
     const halfW = this.width / 2;
-    const topY = 80;  // 距顶部
+    const topY = 80;  // 最高点（距顶部）
     const bottomY = this.skyHeight - 50;  // 地平线
     
     // 太阳：6:00~18:00
     if (hour >= 6 && hour < 18) {
       const progress = (hour - 6) / 12;
       const sunX = halfW * 0.2 + progress * halfW * 1.6;
-      const sunY = topY + Math.sin(progress * Math.PI) * (bottomY - topY) * 0.6;
+      // 中午在最高点（topY），日出日落在低点（bottomY）
+      const sunY = bottomY - Math.sin(progress * Math.PI) * (bottomY - topY);
       
       this.drawSun(sunX, sunY, 40);
     }
@@ -95,7 +96,8 @@ export class WeatherRenderer {
       }
       
       const moonX = halfW * 0.2 + progress * halfW * 1.6;
-      const moonY = topY + Math.sin(progress * Math.PI) * (bottomY - topY) * 0.6;
+      // 午夜在最高点（topY），升落时在低点（bottomY）
+      const moonY = bottomY - Math.sin(progress * Math.PI) * (bottomY - topY);
       
       this.drawMoon(moonX, moonY, 25);
     }
@@ -284,6 +286,7 @@ export class WeatherRenderer {
   private updatePrecipitation(weather: WeatherData, deltaTime: number) {
     const code = weather.weatherCode;
     const precipitation = weather.precipitation || 0;
+    const windForce = (weather.windSpeed || 0) * 3;  // 风力影响水平漂移
     
     // 判断是雨还是雪
     const isSnow = code >= 71 && code <= 77;
@@ -304,12 +307,15 @@ export class WeatherRenderer {
       // 更新雪花位置
       for (const flake of this.snowflakes) {
         flake.y += flake.speed * deltaTime;
-        flake.x += Math.sin(flake.y * 0.01) * 20 * deltaTime;  // 飘动
+        flake.x += Math.sin(flake.y * 0.01) * 20 * deltaTime + windForce * deltaTime;  // 飘动+风
         
         if (flake.y > this.height) {
           flake.y = -10;
           flake.x = Math.random() * this.width;
         }
+        // 水平循环
+        if (flake.x > this.width) flake.x = 0;
+        if (flake.x < 0) flake.x = this.width;
       }
     } else if (isRain) {
       // 雨
@@ -326,11 +332,15 @@ export class WeatherRenderer {
       // 更新雨滴位置
       for (const drop of this.raindrops) {
         drop.y += drop.speed * deltaTime;
+        drop.x += windForce * deltaTime;  // 风吹雨斜
         
         if (drop.y > this.height) {
           drop.y = -20;
           drop.x = Math.random() * this.width;
         }
+        // 水平循环
+        if (drop.x > this.width) drop.x = 0;
+        if (drop.x < 0) drop.x = this.width;
       }
     } else {
       // 无降水
