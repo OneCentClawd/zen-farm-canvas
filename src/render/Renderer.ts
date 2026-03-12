@@ -1,11 +1,16 @@
 /**
  * Canvas 渲染器 - 负责所有绘制
  */
+
+import { PlantRenderer } from './PlantRenderer';
+import { PlantData } from '../core/PlantTypes';
+
 export class Renderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private width: number;
   private height: number;
+  private plantRenderer: PlantRenderer;
   
   // 布局常量
   private readonly SOIL_HEIGHT_RATIO = 0.35;  // 土壤占屏幕高度比例
@@ -15,6 +20,7 @@ export class Renderer {
     this.ctx = canvas.getContext('2d')!;
     this.width = canvas.width;
     this.height = canvas.height;
+    this.plantRenderer = new PlantRenderer(this.ctx);
   }
   
   /**
@@ -137,5 +143,19 @@ export class Renderer {
     const soilY = this.height * (1 - this.SOIL_HEIGHT_RATIO);
     const soilHeight = this.height * this.SOIL_HEIGHT_RATIO;
     return { y: soilY, height: soilHeight };
+  }
+  
+  /**
+   * 绘制植物
+   */
+  drawPlant(plant: PlantData, deltaTime: number = 0) {
+    const soilArea = this.getSoilArea();
+    // 植物底部在土壤表面
+    const x = this.width / 2;
+    const y = soilArea.y;
+    // 缩放系数，让植物适配屏幕
+    const scale = Math.min(this.width, soilArea.height) / 200;
+    
+    this.plantRenderer.render(plant, x, y, scale, deltaTime);
   }
 }

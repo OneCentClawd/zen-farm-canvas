@@ -129,14 +129,17 @@ export class Game {
   private render() {
     const hour = new Date().getHours();
     const ctx = this.renderer.getContext();
+    const deltaTime = (performance.now() - this.lastTime) / 1000;
     
     this.renderer.clear();
     this.renderer.drawSky(hour, this.weather.cloudCover || 0);
     this.renderer.drawSoil();
     
-    // 空地标记
+    // 植物或空地
     const plot = this.getCurrentPlot();
-    if (!plot?.plant) {
+    if (plot?.plant) {
+      this.renderer.drawPlant(plot.plant, deltaTime);
+    } else {
       this.renderer.drawEmptyPlot();
     }
     
