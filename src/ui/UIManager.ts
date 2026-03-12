@@ -94,29 +94,39 @@ export class UIManager {
    * 绑定事件
    */
   private bindEvents() {
+    // 只监听 touchstart，用 preventDefault 阻止后续 click
+    this.canvas.addEventListener('touchstart', (e) => this.handleTouch(e), { passive: false });
+    // 兼容桌面端
     this.canvas.addEventListener('click', (e) => this.handleClick(e));
-    this.canvas.addEventListener('touchstart', (e) => this.handleTouch(e));
   }
   
   /**
-   * 处理点击
+   * 处理点击（桌面端）
    */
   private handleClick(e: MouseEvent) {
     const x = e.clientX * this.dpr;
     const y = e.clientY * this.dpr;
-    this.checkButtonClick(x, y);
-    this.checkStatusBarClick(x, y);
+    this.handleInteraction(x, y);
   }
   
   /**
-   * 处理触摸
+   * 处理触摸（移动端）
    */
   private handleTouch(e: TouchEvent) {
     if (e.touches.length === 0) return;
+    e.preventDefault();  // 阻止后续 click 事件
     const touch = e.touches[0];
     const x = touch.clientX * this.dpr;
     const y = touch.clientY * this.dpr;
-    this.checkButtonClick(x, y);
+    this.handleInteraction(x, y);
+  }
+  
+  /**
+   * 统一处理交互
+   */
+  private handleInteraction(x: number, y: number) {
+    // 短路：按钮优先，点中按钮就不检查状态栏
+    if (this.checkButtonClick(x, y)) return;
     this.checkStatusBarClick(x, y);
   }
   
