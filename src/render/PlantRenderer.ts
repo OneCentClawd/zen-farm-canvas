@@ -43,12 +43,34 @@ const COLORS = {
   dead: '#4a3a2a'
 };
 
+/**
+ * 确定性随机数生成器（基于种子）
+ * 同一个种子+索引永远返回相同的值
+ */
+function seededRandom(seed: number, index: number): number {
+  const x = Math.sin(seed * 9999 + index * 7777) * 10000;
+  return x - Math.floor(x);
+}
+
 export class PlantRenderer {
   private ctx: CanvasRenderingContext2D;
   private animTime: number = 0;
   
   constructor(ctx: CanvasRenderingContext2D) {
     this.ctx = ctx;
+  }
+  
+  /**
+   * 字符串转数字哈希（用于 seededRandom 的种子）
+   */
+  private hashCode(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;  // Convert to 32bit integer
+    }
+    return Math.abs(hash);
   }
   
   /**
@@ -394,11 +416,12 @@ export class PlantRenderer {
       ctx.arc(flowerX, flowerY, flowerSize * 0.5, 0, Math.PI * 2);
       ctx.fill();
       
-      // 种子纹理
+      // 种子纹理（用 seededRandom 避免闪烁）
+      const seed = this.hashCode(plant.id);
       ctx.fillStyle = COLORS.sunflowerSeed;
       for (let i = 0; i < 20; i++) {
-        const a = Math.random() * Math.PI * 2;
-        const r = Math.random() * flowerSize * 0.4;
+        const a = seededRandom(seed, i * 2) * Math.PI * 2;
+        const r = seededRandom(seed, i * 2 + 1) * flowerSize * 0.4;
         ctx.beginPath();
         ctx.arc(flowerX + Math.cos(a) * r, flowerY + Math.sin(a) * r, 2, 0, Math.PI * 2);
         ctx.fill();
@@ -448,11 +471,12 @@ export class PlantRenderer {
       ctx.quadraticCurveTo(fruitSize * 0.8, height * 0.5, 0, height * 0.5 + fruitSize);
       ctx.fill();
       
-      // 种子
+      // 种子（用 seededRandom 避免闪烁）
+      const seed = this.hashCode(plant.id);
       ctx.fillStyle = COLORS.strawberrySeed;
       for (let i = 0; i < 8; i++) {
-        const sx = (Math.random() - 0.5) * fruitSize * 0.8;
-        const sy = height * 0.5 + (Math.random() - 0.3) * fruitSize * 0.8;
+        const sx = (seededRandom(seed, i * 2) - 0.5) * fruitSize * 0.8;
+        const sy = height * 0.5 + (seededRandom(seed, i * 2 + 1) - 0.3) * fruitSize * 0.8;
         ctx.beginPath();
         ctx.ellipse(sx, sy, 1.5, 1, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -500,15 +524,16 @@ export class PlantRenderer {
       ctx.stroke();
     }
     
-    // 花朵
+    // 花朵（用 seededRandom 避免闪烁）
     if (progress > 0.6 && !isDead) {
       const flowerCount = Math.floor((progress - 0.6) * 50);
+      const seed = this.hashCode(plant.id);
       ctx.fillStyle = wiltLevel > 0.3 ? '#ffd0d8' : COLORS.sakuraPink;
       
       for (let i = 0; i < flowerCount; i++) {
-        const fx = endX * (0.3 + Math.random() * 0.7) + (Math.random() - 0.5) * 40;
-        const fy = endY * (0.4 + Math.random() * 0.6) + (Math.random() - 0.5) * 30;
-        const fsize = 4 + Math.random() * 4;
+        const fx = endX * (0.3 + seededRandom(seed, i * 5) * 0.7) + (seededRandom(seed, i * 5 + 1) - 0.5) * 40;
+        const fy = endY * (0.4 + seededRandom(seed, i * 5 + 2) * 0.6) + (seededRandom(seed, i * 5 + 3) - 0.5) * 30;
+        const fsize = 4 + seededRandom(seed, i * 5 + 4) * 4;
         
         // 5瓣花
         for (let p = 0; p < 5; p++) {
