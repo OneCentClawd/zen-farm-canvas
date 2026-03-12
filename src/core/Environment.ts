@@ -2,7 +2,16 @@
  * 环境系统 - 天气 API + 土壤湿度计算
  */
 
-import { httpGet } from './Platform';
+/**
+ * HTTP GET 请求（Canvas 版用 fetch）
+ */
+async function httpGet(url: string): Promise<any> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+  return response.json();
+}
 
 /**
  * 天气数据
