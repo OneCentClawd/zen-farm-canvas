@@ -9,13 +9,19 @@ export class Renderer {
   
   // 布局常量
   private readonly SOIL_HEIGHT_RATIO = 0.35;  // 土壤占屏幕高度比例
-  private readonly PLOT_COUNT = 4;  // 地块数量
   
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.width = canvas.width;
     this.height = canvas.height;
+  }
+  
+  /**
+   * 获取绑定的 context
+   */
+  getContext(): CanvasRenderingContext2D {
+    return this.ctx;
   }
   
   /**
@@ -85,7 +91,7 @@ export class Renderer {
   }
   
   /**
-   * 绘制土壤和地块
+   * 绘制土壤（单地块显示）
    */
   drawSoil() {
     const soilY = this.height * (1 - this.SOIL_HEIGHT_RATIO);
@@ -99,53 +105,37 @@ export class Renderer {
     
     this.ctx.fillStyle = gradient;
     this.ctx.fillRect(0, soilY, this.width, soilHeight);
+  }
+  
+  /**
+   * 绘制空地标记（种植提示）
+   */
+  drawEmptyPlot() {
+    const soilY = this.height * (1 - this.SOIL_HEIGHT_RATIO);
+    const soilHeight = this.height * this.SOIL_HEIGHT_RATIO;
     
-    // 绘制地块分隔线
-    const plotWidth = this.width / this.PLOT_COUNT;
-    this.ctx.strokeStyle = '#5a4020';
-    this.ctx.lineWidth = 2;
-    
-    for (let i = 1; i < this.PLOT_COUNT; i++) {
-      const x = i * plotWidth;
-      this.ctx.beginPath();
-      this.ctx.moveTo(x, soilY);
-      this.ctx.lineTo(x, this.height);
-      this.ctx.stroke();
-    }
-    
-    // 绘制空地标记（种植提示）
     this.ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
     this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
     this.ctx.lineWidth = 2;
     this.ctx.setLineDash([5, 5]);
     
     const circleY = soilY + soilHeight * 0.4;
-    const circleRadius = Math.min(plotWidth, soilHeight) * 0.25;
+    const circleRadius = Math.min(this.width, soilHeight) * 0.2;
     
-    for (let i = 0; i < this.PLOT_COUNT; i++) {
-      const x = (i + 0.5) * plotWidth;
-      this.ctx.beginPath();
-      this.ctx.arc(x, circleY, circleRadius, 0, Math.PI * 2);
-      this.ctx.fill();
-      this.ctx.stroke();
-    }
+    this.ctx.beginPath();
+    this.ctx.arc(this.width / 2, circleY, circleRadius, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.stroke();
     
     this.ctx.setLineDash([]);
   }
   
   /**
-   * 获取地块位置信息
+   * 获取土壤区域信息
    */
-  getPlotPosition(index: number): { x: number, y: number, width: number, height: number } {
-    const plotWidth = this.width / this.PLOT_COUNT;
+  getSoilArea(): { y: number, height: number } {
     const soilY = this.height * (1 - this.SOIL_HEIGHT_RATIO);
     const soilHeight = this.height * this.SOIL_HEIGHT_RATIO;
-    
-    return {
-      x: index * plotWidth,
-      y: soilY,
-      width: plotWidth,
-      height: soilHeight
-    };
+    return { y: soilY, height: soilHeight };
   }
 }
