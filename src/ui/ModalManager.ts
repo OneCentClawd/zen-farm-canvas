@@ -277,19 +277,47 @@ export class ModalManager {
 // ========== 预设弹窗配置 ==========
 
 /**
- * 种植选择弹窗
+ * 种植选择弹窗（第一步：选植物）
  */
-export function createPlantModal(onSelect: (type: string, hardMode: boolean) => void): ModalConfig {
+export function createPlantModal(onSelect: (type: string) => void): ModalConfig {
   return {
     type: 'plant',
     title: '选择种子',
     buttons: [
-      { icon: '🍀', label: '三叶草', action: () => onSelect('clover', false) },
-      { icon: '🌻', label: '向日葵', action: () => onSelect('sunflower', false) },
-      { icon: '🍓', label: '草莓', action: () => onSelect('strawberry', false) },
-      { icon: '🌸', label: '樱花', action: () => onSelect('sakura', false) }
+      { icon: '🍀', label: '三叶草', action: () => onSelect('clover') },
+      { icon: '🌻', label: '向日葵', action: () => onSelect('sunflower') },
+      { icon: '🍓', label: '草莓', action: () => onSelect('strawberry') },
+      { icon: '🌸', label: '樱花', action: () => onSelect('sakura') }
     ]
   };
+}
+
+/**
+ * 难度选择弹窗（第二步：选难度）
+ */
+export function createDifficultyModal(plantType: string, onSelect: (hardMode: boolean) => void): ModalConfig {
+  return {
+    type: 'confirm',
+    title: '选择难度',
+    message: `种植${getPlantName(plantType)}`,
+    buttons: [
+      { label: '🧘 佛系模式', action: () => onSelect(false) },
+      { label: '💪 硬核模式', action: () => onSelect(true) }
+    ]
+  };
+}
+
+/**
+ * 获取植物中文名
+ */
+function getPlantName(type: string): string {
+  const names: { [key: string]: string } = {
+    clover: '三叶草',
+    sunflower: '向日葵',
+    strawberry: '草莓',
+    sakura: '樱花'
+  };
+  return names[type] || type;
 }
 
 /**

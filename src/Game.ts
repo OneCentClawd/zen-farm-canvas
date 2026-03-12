@@ -1,9 +1,9 @@
 import { Renderer } from './render/Renderer';
 import { UIManager } from './ui/UIManager';
-import { ModalManager, createPlantModal, createFacilityModal, createConfirmModal } from './ui/ModalManager';
+import { ModalManager, createPlantModal, createDifficultyModal, createFacilityModal, createConfirmModal } from './ui/ModalManager';
 import { WeatherData, fetchWeather, DEFAULT_WEATHER } from './core/Environment';
 import { loadOrCreateGame, saveGame } from './core/Storage';
-import { GameSaveData, plantSeed, waterPlot, harvestPlot, removePlant, installShelter, removeShelter, installDehumidifier, removeDehumidifier } from './core/GameData';
+import { GameSaveData, plantSeed, waterPlot, harvestPlot, removePlant, installShelter, removeShelter, installDehumidifier, removeDehumidifier, createPlot } from './core/GameData';
 import { PlantType } from './core/PlantTypes';
 
 /**
@@ -239,8 +239,12 @@ export class Game {
       return;
     }
     
-    this.modal.show(createPlantModal((type, hardMode) => {
-      this.plant(type as PlantType, hardMode);
+    // 第一步：选植物
+    this.modal.show(createPlantModal((type) => {
+      // 第二步：选难度
+      this.modal.show(createDifficultyModal(type, (hardMode) => {
+        this.plant(type as PlantType, hardMode);
+      }));
     }));
   }
   
@@ -300,6 +304,9 @@ export class Game {
       // 检查是否解锁新地块
       if (this.gameData.totalHarvests % 3 === 0 && this.gameData.unlockedPlots < 4) {
         this.gameData.unlockedPlots++;
+        // 创建新地块
+        const newPlot = createPlot(this.gameData.plots.length);
+        this.gameData.plots.push(newPlot);
         console.log(`🎉 解锁新地块！当前: ${this.gameData.unlockedPlots}`);
       }
       
