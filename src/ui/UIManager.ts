@@ -55,7 +55,7 @@ export class UIManager {
         y: btnY,
         width: btnSize,
         height: btnSize,
-        action: () => this.game.plant('tomato')  // TODO: 弹出选择菜单
+        action: () => this.game.showPlantModal()
       },
       {
         id: 'water',
@@ -75,7 +75,7 @@ export class UIManager {
         y: btnY,
         width: btnSize,
         height: btnSize,
-        action: () => console.log('设施菜单')  // TODO: 弹出设施菜单
+        action: () => this.game.showFacilityModal()
       },
       {
         id: 'harvest',
@@ -125,6 +125,13 @@ export class UIManager {
    * 统一处理交互
    */
   private handleInteraction(x: number, y: number) {
+    // 弹窗优先处理
+    const modal = this.game.getModal();
+    if (modal.isVisible()) {
+      modal.handleClick(x, y);
+      return;
+    }
+    
     // 短路：按钮优先，点中按钮就不检查状态栏
     if (this.checkButtonClick(x, y)) return;
     this.checkStatusBarClick(x, y);

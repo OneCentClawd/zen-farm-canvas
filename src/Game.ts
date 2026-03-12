@@ -1,8 +1,10 @@
 import { Renderer } from './render/Renderer';
 import { UIManager } from './ui/UIManager';
+import { ModalManager, createPlantModal, createFacilityModal, createConfirmModal } from './ui/ModalManager';
 import { WeatherData, fetchWeather, DEFAULT_WEATHER } from './core/Environment';
 import { loadOrCreateGame, saveGame } from './core/Storage';
-import { GameSaveData } from './core/GameData';
+import { GameSaveData, plantSeed, waterPlot, harvestPlot, removePlant, installShelter, removeShelter, installDehumidifier, removeDehumidifier } from './core/GameData';
+import { PlantType } from './core/PlantTypes';
 
 /**
  * 游戏主类
@@ -11,26 +13,28 @@ export class Game {
   private canvas: HTMLCanvasElement;
   private renderer: Renderer;
   private ui: UIManager;
+  private modal: ModalManager;
   private lastTime: number = 0;
   private running: boolean = false;
   
   // 游戏数据
   private gameData: GameSaveData;
   private weather: WeatherData = DEFAULT_WEATHER;
-  private currentPlotIndex: number = 0;  // 当前显示的地块
+  private currentPlotIndex: number = 0;
   
   // 定时器
   private weatherUpdateInterval: number = 0;
   private autoSaveInterval: number = 0;
   
   // 位置信息
-  private latitude: number = 39.9;   // 默认北京
+  private latitude: number = 39.9;
   private longitude: number = 116.4;
   
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.renderer = new Renderer(canvas);
     this.ui = new UIManager(canvas, this);
+    this.modal = new ModalManager();
     
     // 加载存档
     this.gameData = loadOrCreateGame();
@@ -55,6 +59,7 @@ export class Game {
     
     this.renderer.resize(width * dpr, height * dpr);
     this.ui.resize(width * dpr, height * dpr);
+    this.modal.resize(width * dpr, height * dpr);
   }
   
   /**
@@ -105,13 +110,9 @@ export class Game {
     const deltaTime = (timestamp - this.lastTime) / 1000;
     this.lastTime = timestamp;
     
-    // 更新
     this.update(deltaTime);
-    
-    // 渲染
     this.render();
     
-    // 下一帧
     requestAnimationFrame((t) => this.loop(t));
   }
   
@@ -119,7 +120,7 @@ export class Game {
    * 更新逻辑
    */
   private update(deltaTime: number) {
-    // TODO: 更新植物生长等
+    // TODO: 更新植物生长
   }
   
   /**
@@ -127,13 +128,23 @@ export class Game {
    */
   private render() {
     const hour = new Date().getHours();
+    const ctx = this.renderer.getContext();
     
     this.renderer.clear();
     this.renderer.drawSky(hour, this.weather.cloudCover || 0);
     this.renderer.drawSoil();
     
-    // 绘制 UI
-    this.ui.render(this.renderer.getContext(), this.weather, this.getCurrentPlot());
+    // 空地标记
+    const plot = this.getCurrentPlot();
+    if (!plot?.plant) {
+      this.renderer.drawEmptyPlot();
+    }
+    
+    // UI
+    this.ui.render(ctx, this.weather, plot);
+    
+    // 弹窗（最上层）
+    this.modal.render(ctx);
   }
   
   /**
@@ -182,81 +193,165 @@ export class Game {
     saveGame(this.gameData);
   }
   
-  /**
-   * 获取当前地块数据
-   */
+  // ========== Getters ==========
+  
   getCurrentPlot() {
     return this.gameData.plots[this.currentPlotIndex] || null;
   }
   
-  /**
-   * 获取游戏数据
-   */
   getGameData() {
     return this.gameData;
   }
   
-  /**
-   * 获取天气数据
-   */
   getWeather() {
     return this.weather;
   }
   
-  /**
-   * 切换地块
-   */
+  getCurrentPlotIndex() {
+    return this.currentPlotIndex;
+  }
+  
+  getPlotCount() {
+    return this.gameData.plots.length;
+  }
+  
+  getModal() {
+    return this.modal;
+  }
+  
   switchPlot(index: number) {
     if (index >= 0 && index < this.gameData.plots.length) {
       this.currentPlotIndex = index;
     }
   }
   
-  /**
-   * 获取当前地块索引
-   */
-  getCurrentPlotIndex() {
-    return this.currentPlotIndex;
-  }
-  
-  /**
-   * 获取地块总数
-   */
-  getPlotCount() {
-    return this.gameData.plots.length;
-  }
-  
   // ========== 操作方法 ==========
+  
+  /**
+   * 显示种植选择弹窗
+   */
+  showPlantModal() {
+    const plot = this.getCurrentPlot();
+    if (!plot) return;
+    
+    if (plot.plant) {
+      console.log('⚠️ 该地块已有植物');
+      return;
+    }
+    
+    this.modal.show(createPlantModal((type, hardMode) => {
+      this.plant(type as PlantType, hardMode);
+    }));
+  }
+  
+  /**
+   * 显示设施菜单弹窗
+   */
+  showFacilityModal() {
+    const plot = this.getCurrentPlot();
+    if (!plot) return;
+    
+    this.modal.show(createFacilityModal(
+      plot.hasShelter,
+      plot.hasDehumidifier,
+      () => this.toggleShelter(),
+      () => this.toggleDehumidifier()
+    ));
+  }
   
   /**
    * 种植
    */
-  plant(plantType: string) {
-    // TODO: 实现种植逻辑
-    console.log(`🌱 种植: ${plantType}`);
+  plant(plantType: PlantType, hardMode: boolean = false) {
+    const plot = this.getCurrentPlot();
+    if (!plot || plot.plant) return;
+    
+    const newPlot = plantSeed(plot, plantType, hardMode);
+    this.gameData.plots[this.currentPlotIndex] = newPlot;
+    this.save();
+    console.log(`🌱 种植: ${plantType}${hardMode ? ' (硬核模式)' : ''}`);
   }
   
   /**
    * 浇水
    */
   water() {
-    // TODO: 实现浇水逻辑
-    console.log('💧 浇水');
+    const plot = this.getCurrentPlot();
+    if (!plot) return;
+    
+    const newPlot = waterPlot(plot);
+    this.gameData.plots[this.currentPlotIndex] = newPlot;
+    this.save();
+    console.log('💧 浇水完成');
   }
   
   /**
    * 收获
    */
   harvest() {
-    // TODO: 实现收获逻辑
-    console.log('🌾 收获');
+    const plot = this.getCurrentPlot();
+    if (!plot?.plant) return;
+    
+    const result = harvestPlot(plot);
+    if (result.harvested) {
+      this.gameData.plots[this.currentPlotIndex] = result.plot;
+      this.gameData.totalHarvests++;
+      
+      // 检查是否解锁新地块
+      if (this.gameData.totalHarvests % 3 === 0 && this.gameData.unlockedPlots < 4) {
+        this.gameData.unlockedPlots++;
+        console.log(`🎉 解锁新地块！当前: ${this.gameData.unlockedPlots}`);
+      }
+      
+      this.save();
+      console.log('🌾 收获成功！');
+    } else {
+      console.log('⚠️ 植物尚未成熟');
+    }
   }
   
   /**
    * 挖除
    */
   remove() {
-    // TODO: 实现挖除逻辑
-    console.log('🗑️ 挖除');
+    const plot = this.getCurrentPlot();
+    if (!plot?.plant) return;
+    
+    this.modal.show(createConfirmModal(
+      '确认挖除',
+      '确定要挖除这株植物吗？',
+      () => {
+        const newPlot = removePlant(plot);
+        this.gameData.plots[this.currentPlotIndex] = newPlot;
+        this.save();
+        console.log('🗑️ 已挖除植物');
+      }
+    ));
+  }
+  
+  /**
+   * 切换遮雨棚
+   */
+  toggleShelter() {
+    const plot = this.getCurrentPlot();
+    if (!plot) return;
+    
+    const newPlot = plot.hasShelter ? removeShelter(plot) : installShelter(plot);
+    this.gameData.plots[this.currentPlotIndex] = newPlot;
+    this.save();
+    console.log(plot.hasShelter ? '⛱️ 移除遮雨棚' : '⛱️ 安装遮雨棚');
+  }
+  
+  /**
+   * 切换除湿器
+   */
+  toggleDehumidifier() {
+    const plot = this.getCurrentPlot();
+    if (!plot) return;
+    
+    const newPlot = plot.hasDehumidifier ? removeDehumidifier(plot) : installDehumidifier(plot);
+    this.gameData.plots[this.currentPlotIndex] = newPlot;
+    this.save();
+    console.log(plot.hasDehumidifier ? '💨 移除除湿器' : '💨 安装除湿器');
   }
 }
