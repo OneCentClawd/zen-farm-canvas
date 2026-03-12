@@ -3,7 +3,9 @@
  */
 
 import { PlantRenderer } from './PlantRenderer';
+import { WeatherRenderer } from './WeatherRenderer';
 import { PlantData } from '../core/PlantTypes';
+import { WeatherData } from '../core/Environment';
 
 export class Renderer {
   private canvas: HTMLCanvasElement;
@@ -11,6 +13,7 @@ export class Renderer {
   private width: number;
   private height: number;
   private plantRenderer: PlantRenderer;
+  private weatherRenderer: WeatherRenderer;
   
   // 布局常量
   private readonly SOIL_HEIGHT_RATIO = 0.35;  // 土壤占屏幕高度比例
@@ -21,6 +24,13 @@ export class Renderer {
     this.width = canvas.width;
     this.height = canvas.height;
     this.plantRenderer = new PlantRenderer(this.ctx);
+    this.weatherRenderer = new WeatherRenderer(this.ctx);
+    this.updateWeatherRendererSize();
+  }
+  
+  private updateWeatherRendererSize() {
+    const skyHeight = this.height * (1 - this.SOIL_HEIGHT_RATIO);
+    this.weatherRenderer.resize(this.width, this.height, skyHeight);
   }
   
   /**
@@ -38,6 +48,7 @@ export class Renderer {
     this.height = height;
     this.canvas.width = width;
     this.canvas.height = height;
+    this.updateWeatherRendererSize();
   }
   
   /**
@@ -157,5 +168,12 @@ export class Renderer {
     const scale = Math.min(this.width, soilArea.height) / 200;
     
     this.plantRenderer.render(plant, x, y, scale, deltaTime);
+  }
+  
+  /**
+   * 绘制天气效果（云、太阳/月亮、雨雪）
+   */
+  drawWeather(weather: WeatherData, hour: number, deltaTime: number) {
+    this.weatherRenderer.render(weather, hour, deltaTime);
   }
 }

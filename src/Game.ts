@@ -127,12 +127,17 @@ export class Game {
    * 渲染画面
    */
   private render() {
-    const hour = new Date().getHours();
+    const now = new Date();
+    const hour = now.getHours() + now.getMinutes() / 60;  // 支持小数
     const ctx = this.renderer.getContext();
     const deltaTime = (performance.now() - this.lastTime) / 1000;
     
     this.renderer.clear();
     this.renderer.drawSky(hour, this.weather.cloudCover || 0);
+    
+    // 天气效果（云、太阳/月亮、雨雪）
+    this.renderer.drawWeather(this.weather, hour, deltaTime);
+    
     this.renderer.drawSoil();
     
     // 植物或空地
