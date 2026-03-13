@@ -5,6 +5,7 @@ import { WeatherData, fetchWeather, DEFAULT_WEATHER } from './core/Environment';
 import { loadOrCreateGame, saveGame } from './core/Storage';
 import { GameSaveData, plantSeed, waterPlot, harvestPlot, removePlant, installShelter, removeShelter, installDehumidifier, removeDehumidifier, createPlot } from './core/GameData';
 import { PlantType } from './core/PlantTypes';
+import { getSystemInfo, onResize, getLocation } from './platform/adapter';
 
 /**
  * 游戏主类
@@ -41,25 +42,23 @@ export class Game {
     
     // 自适应屏幕
     this.resize();
-    window.addEventListener('resize', () => this.resize());
+    onResize(() => this.resize());
   }
   
   /**
    * 调整画布大小
    */
   private resize() {
-    const dpr = window.devicePixelRatio || 1;
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+    const { width, height, pixelRatio } = getSystemInfo();
     
     this.canvas.style.width = `${width}px`;
     this.canvas.style.height = `${height}px`;
-    this.canvas.width = width * dpr;
-    this.canvas.height = height * dpr;
+    this.canvas.width = width * pixelRatio;
+    this.canvas.height = height * pixelRatio;
     
-    this.renderer.resize(width * dpr, height * dpr);
-    this.ui.resize(width * dpr, height * dpr);
-    this.modal.resize(width * dpr, height * dpr);
+    this.renderer.resize(width * pixelRatio, height * pixelRatio);
+    this.ui.resize(width * pixelRatio, height * pixelRatio);
+    this.modal.resize(width * pixelRatio, height * pixelRatio);
   }
   
   /**
@@ -71,7 +70,7 @@ export class Game {
     this.lastTime = performance.now();
     
     // 获取位置
-    await this.getLocation();
+    await this.fetchLocation();
     
     // 获取天气
     await this.updateWeather();
@@ -160,28 +159,15 @@ export class Game {
   /**
    * 获取位置
    */
-  private async getLocation(): Promise<void> {
-    return new Promise((resolve) => {
-      if (!navigator.geolocation) {
-        console.log('📍 不支持定位，使用默认位置');
-        resolve();
-        return;
-      }
-      
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          this.latitude = pos.coords.latitude;
-          this.longitude = pos.coords.longitude;
-          console.log(`📍 定位成功: ${this.latitude}, ${this.longitude}`);
-          resolve();
-        },
-        (err) => {
-          console.log('📍 定位失败，使用默认位置:', err.message);
-          resolve();
-        },
-        { timeout: 5000 }
-      );
-    });
+  private async fetchLocation(): Promise<void> {
+    try {
+      const loc = await getLocation();
+      this.latitude = loc.latitude;
+      this.longitude = loc.longitude;
+      console.log(`📍 定位成功: ${this.latitude}, ${this.longitude}`);
+    } catch (e) {
+      console.log('📍 定位失败，使用默认位置');
+    }
   }
   
   /**

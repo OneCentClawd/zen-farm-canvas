@@ -1,8 +1,9 @@
 /**
- * 存储管理 - 本地数据持久化
+ * 存储管理 - 本地数据持久化（跨平台）
  */
 
 import { GameSaveData, createNewGame } from './GameData';
+import { setStorage, getStorage } from '../platform/adapter';
 
 const SAVE_KEY = 'zen_farm_save';
 const WEATHER_CACHE_KEY = 'zen_farm_weather_cache';
@@ -12,8 +13,7 @@ const WEATHER_CACHE_KEY = 'zen_farm_weather_cache';
  */
 export function saveGame(data: GameSaveData): void {
   try {
-    const json = JSON.stringify(data);
-    localStorage.setItem(SAVE_KEY, json);
+    setStorage(SAVE_KEY, data);
     console.log('💾 游戏已保存');
   } catch (e) {
     console.error('保存失败:', e);
@@ -25,12 +25,10 @@ export function saveGame(data: GameSaveData): void {
  */
 export function loadGame(): GameSaveData | null {
   try {
-    const json = localStorage.getItem(SAVE_KEY);
-    if (!json) return null;
-    
-    const data = JSON.parse(json) as GameSaveData;
+    const data = getStorage(SAVE_KEY);
+    if (!data) return null;
     console.log('📂 存档已加载');
-    return data;
+    return data as GameSaveData;
   } catch (e) {
     console.error('加载失败:', e);
     return null;
@@ -41,7 +39,7 @@ export function loadGame(): GameSaveData | null {
  * 删除存档
  */
 export function deleteSave(): void {
-  localStorage.removeItem(SAVE_KEY);
+  setStorage(SAVE_KEY, null);
   console.log('🗑️ 存档已删除');
 }
 
@@ -63,7 +61,7 @@ export function cacheWeather(weather: any): void {
       data: weather,
       timestamp: Date.now(),
     };
-    localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify(cache));
+    setStorage(WEATHER_CACHE_KEY, cache);
   } catch (e) {
     console.error('缓存天气失败:', e);
   }
@@ -74,10 +72,9 @@ export function cacheWeather(weather: any): void {
  */
 export function getCachedWeather(): any | null {
   try {
-    const json = localStorage.getItem(WEATHER_CACHE_KEY);
-    if (!json) return null;
+    const cache = getStorage(WEATHER_CACHE_KEY);
+    if (!cache) return null;
     
-    const cache = JSON.parse(json);
     const age = Date.now() - cache.timestamp;
     
     // 超过 1 小时过期
