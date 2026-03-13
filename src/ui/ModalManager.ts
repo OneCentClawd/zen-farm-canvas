@@ -41,6 +41,7 @@ export class ModalManager {
    * 显示弹窗
    */
   show(config: ModalConfig, onClose?: () => void) {
+    console.log(`📋 显示弹窗: ${config.type}, 按钮数: ${config.buttons.length}`);
     this.currentModal = config;
     this.onClose = onClose || null;
     this.updateButtonRects();
@@ -100,7 +101,11 @@ export class ModalManager {
    * 渲染弹窗
    */
   render(ctx: CanvasRenderingContext2D) {
-    if (!this.currentModal) return;
+    if (!this.currentModal) {
+      return;
+    }
+    
+    console.log(`🎨 渲染弹窗: ${this.currentModal.type}`);
     
     // 遮罩
     ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
