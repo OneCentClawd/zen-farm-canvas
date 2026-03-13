@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "build:minigame": "tsc && cp -r dist/* minigame/",
+    "build:minigame": "tsc && node scripts/copy-to-minigame.js",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },
