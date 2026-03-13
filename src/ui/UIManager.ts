@@ -141,13 +141,18 @@ export class UIManager {
    * 检查按钮点击
    */
   private checkButtonClick(x: number, y: number) {
+    console.log(`🖱️ 点击位置: (${x.toFixed(0)}, ${y.toFixed(0)})`);
+    console.log(`📍 按钮数量: ${this.buttons.length}`);
     for (const btn of this.buttons) {
+      console.log(`  ${btn.id}: (${btn.x.toFixed(0)}, ${btn.y.toFixed(0)}) ~ (${(btn.x + btn.width).toFixed(0)}, ${(btn.y + btn.height).toFixed(0)})`);
       if (x >= btn.x && x <= btn.x + btn.width &&
           y >= btn.y && y <= btn.y + btn.height) {
+        console.log(`✅ 点中按钮: ${btn.id}`);
         btn.action();
         return true;
       }
     }
+    console.log('❌ 没有点中任何按钮');
     return false;
   }
   
